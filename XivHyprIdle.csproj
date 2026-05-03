@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Dalamud.NET.Sdk/15.0.0">
+    <PropertyGroup>
+        <Version>1.0.0</Version>
+        <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
+        <OutputPath>bin</OutputPath>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <Author>YF</Author>
+        <Name>XivHyprIdle</Name>
+        <Description>wine-wayland background fps limit fix</Description>
+        <Punchline>Fixing focus before wine-wayland</Punchline>
+        <InternalName>XivHyprIdle</InternalName>
+        <Tags>utility</Tags>
+    </PropertyGroup>
+</Project>
