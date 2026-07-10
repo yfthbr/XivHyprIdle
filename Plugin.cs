@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
-using FFXIVClientStructs.FFXIV.Client.Sound;
+using Dalamud.Utility.Signatures;
 using FFXIVClientStructs.FFXIV.Client.System.Framework;
 using Task = System.Threading.Tasks.Task;
 
@@ -18,10 +18,14 @@ namespace XivHyprIdle;
 // ReSharper disable once PartialTypeWithSinglePart - instantiated by Dalamud
 public sealed partial class Plugin : IAsyncDalamudPlugin
 {
+    // Initialized by Interop.InitializeFromAttributes
+#pragma warning disable CS0649 // Field is never assigned to, and will always have its default value
+    [Signature("E8 ?? ?? ?? ?? E9 ?? ?? ?? ?? 66 83 FF ?? 75")]
+    private readonly unsafe delegate* unmanaged<Framework*, bool, void> _setInactive;
+#pragma warning restore CS0649 // Field is never assigned to, and will always have its default value
+
     private readonly CancellationTokenSource _cts = new();
-
     private Task? _tracker;
-
     private readonly UdpClient _udpListener;
 
     public Plugin(IDalamudPluginInterface pluginInterface)
@@ -30,6 +34,8 @@ public sealed partial class Plugin : IAsyncDalamudPlugin
         if (!int.TryParse(Environment.GetEnvironmentVariable("XIVHYPRIDLE_PORT"), out var port))
             port = 15432;
         _udpListener = new UdpClient(new IPEndPoint(IPAddress.Loopback, port));
+
+        S.Interop.InitializeFromAttributes(this);
     }
 
     public Task LoadAsync(CancellationToken _)
@@ -50,8 +56,7 @@ public sealed partial class Plugin : IAsyncDalamudPlugin
                     {
                         unsafe
                         {
-                            Framework.Instance()->WindowInactive = !inFocus;
-                            SoundManager.Instance()->WindowInactive = !inFocus;
+                            _setInactive(Framework.Instance(), !inFocus);
                         }
                     });
                 }
@@ -80,8 +85,7 @@ public sealed partial class Plugin : IAsyncDalamudPlugin
             {
                 unsafe
                 {
-                    Framework.Instance()->WindowInactive = false;
-                    SoundManager.Instance()->WindowInactive = false;
+                    _setInactive(Framework.Instance(), false);
                 }
             });
         }
@@ -95,4 +99,7 @@ public class S
 
     // ReSharper disable once AutoPropertyCanBeMadeGetOnly.Local - required for plugin interface
     [PluginService] internal static IPluginLog Log { get; private set; } = null!;
+
+    // ReSharper disable once AutoPropertyCanBeMadeGetOnly.Local - required for plugin interface
+    [PluginService] internal static IGameInteropProvider Interop { get; private set; } = null!;
 }
