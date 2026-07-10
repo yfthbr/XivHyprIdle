@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
+using FFXIVClientStructs.FFXIV.Client.Sound;
 using FFXIVClientStructs.FFXIV.Client.System.Framework;
 using Task = System.Threading.Tasks.Task;
 
@@ -50,6 +51,7 @@ public sealed partial class Plugin : IAsyncDalamudPlugin
                         unsafe
                         {
                             Framework.Instance()->WindowInactive = !inFocus;
+                            SoundManager.Instance()->WindowInactive = !inFocus;
                         }
                     });
                 }
@@ -71,6 +73,18 @@ public sealed partial class Plugin : IAsyncDalamudPlugin
         await _tracker!;
         _udpListener.Dispose();
         _cts.Dispose();
+
+        if (!S.Framework.IsFrameworkUnloading)
+        {
+            await S.Framework.RunOnFrameworkThread(() =>
+            {
+                unsafe
+                {
+                    Framework.Instance()->WindowInactive = false;
+                    SoundManager.Instance()->WindowInactive = false;
+                }
+            });
+        }
     }
 }
 
