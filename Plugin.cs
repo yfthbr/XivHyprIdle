@@ -18,15 +18,15 @@ namespace XivHyprIdle;
 // ReSharper disable once PartialTypeWithSinglePart - instantiated by Dalamud
 public sealed partial class Plugin : IAsyncDalamudPlugin
 {
-    // Initialized by Interop.InitializeFromAttributes
-#pragma warning disable CS0649 // Field is never assigned to, and will always have its default value
+    private delegate void SetInactiveDelegate(nint fw, bool isInactive);
     [Signature("E8 ?? ?? ?? ?? E9 ?? ?? ?? ?? 66 83 FF ?? 75")]
-    private readonly unsafe delegate* unmanaged<Framework*, bool, void> _setInactive;
-#pragma warning restore CS0649 // Field is never assigned to, and will always have its default value
+    private readonly SetInactiveDelegate _setInactive = null!;
 
     private readonly CancellationTokenSource _cts = new();
     private Task? _tracker;
     private readonly UdpClient _udpListener;
+
+    private static unsafe nint FrameworkPtr => (nint)Framework.Instance();
 
     public Plugin(IDalamudPluginInterface pluginInterface)
     {
@@ -40,8 +40,6 @@ public sealed partial class Plugin : IAsyncDalamudPlugin
 
     public Task LoadAsync(CancellationToken _)
     {
-        // CancellationToken is for the duration of plugin loading only, avoid using it here.
-        // DisposeAsync will get called anyway, which handles cancellation of the inner task.
         _tracker = Task.Run(async () =>
         {
             while (!_cts.IsCancellationRequested)
@@ -54,10 +52,7 @@ public sealed partial class Plugin : IAsyncDalamudPlugin
                     S.Log.Info($"Focus changed to: {inFocus}, with: {str}");
                     await S.Framework.RunOnFrameworkThread(() =>
                     {
-                        unsafe
-                        {
-                            _setInactive(Framework.Instance(), !inFocus);
-                        }
+                        SetInactive(!inFocus);
                     });
                 }
                 catch (OperationCanceledException)
@@ -68,7 +63,7 @@ public sealed partial class Plugin : IAsyncDalamudPlugin
                     S.Log.Error($"Error in udp reception: {ex}");
                 }
             }
-        });
+        }, CancellationToken.None);
         return Task.CompletedTask;
     }
 
@@ -83,12 +78,14 @@ public sealed partial class Plugin : IAsyncDalamudPlugin
         {
             await S.Framework.RunOnFrameworkThread(() =>
             {
-                unsafe
-                {
-                    _setInactive(Framework.Instance(), false);
-                }
+                SetInactive(false);
             });
         }
+    }
+
+    private void SetInactive(bool isInactive)
+    {
+        _setInactive(FrameworkPtr, isInactive);
     }
 }
 
